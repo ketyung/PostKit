@@ -6,13 +6,30 @@
 	objectVersion = 110;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		10C882ED30B1AABB00D836C2 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 10C882EC30B1AABB00D836C2 /* ZIPFoundation */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		10C882DB30B1AA6400D836C2 /* PostKit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PostKit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		10C882EF30B1AD6D00D836C2 /* Exceptions for "PostKit" folder in "PostKit" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 10C882DA30B1AA6400D836C2 /* PostKit */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		10C882DD30B1AA6400D836C2 /* PostKit */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				10C882EF30B1AD6D00D836C2 /* Exceptions for "PostKit" folder in "PostKit" target */,
+			);
 			path = PostKit;
 			sourceTree = "<group>";
 		};
@@ -22,6 +39,7 @@
 		10C882D830B1AA6400D836C2 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				10C882ED30B1AABB00D836C2 /* ZIPFoundation in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -60,6 +78,9 @@
 				10C882DD30B1AA6400D836C2 /* PostKit */,
 			);
 			name = PostKit;
+			packageProductDependencies = (
+				10C882EC30B1AABB00D836C2 /* ZIPFoundation */,
+			);
 			productName = PostKit;
 			productReference = 10C882DB30B1AA6400D836C2 /* PostKit.app */;
 			productType = "com.apple.product-type.application";
@@ -88,6 +109,9 @@
 			);
 			mainGroup = 10C882D230B1AA6400D836C2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				10C882EB30B1AABB00D836C2 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 10C882DC30B1AA6400D836C2 /* Products */;
 			projectDirPath = "";
@@ -246,6 +270,10 @@
 				DEVELOPMENT_TEAM = 69FAF79796;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PostKit/Info.plist;
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = NO;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "PostKit saves post slides to your library";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "PostKit saves post slides in your photos in order";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -278,6 +306,10 @@
 				DEVELOPMENT_TEAM = 69FAF79796;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PostKit/Info.plist;
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = NO;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "PostKit saves post slides to your library";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "PostKit saves post slides in your photos in order";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -320,6 +352,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		10C882EB30B1AABB00D836C2 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.21;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		10C882EC30B1AABB00D836C2 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 10C882EB30B1AABB00D836C2 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 10C882D330B1AA6400D836C2 /* Project object */;
 	validationLevel = 1;
