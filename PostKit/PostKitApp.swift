@@ -13,11 +13,21 @@ struct Post: Identifiable, Hashable {
     let ttDescription: String
     let igCaption: String
     var shortName: String { id.components(separatedBy: "/").last ?? id }
+    var packID: String { id.components(separatedBy: "/").first ?? id }
+}
+
+/// One imported zip = one project.
+struct Pack: Identifiable, Hashable {
+    let id: String          // folder name under Packs/ (the zip's file name)
+    let posts: [Post]
+    var displayName: String { id.replacingOccurrences(of: "_", with: " ") }
+    var cover: URL? { posts.first?.slides.first }
 }
 
 @MainActor
 final class Store: ObservableObject {
     @Published var posts: [Post] = []
+    @Published var packs: [Pack] = []
     @Published var posted: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "posted") ?? [])
     let root: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("Packs", isDirectory: true)
@@ -57,7 +67,17 @@ final class Store: ObservableObject {
             }
         }
         posts = found.sorted { $0.id.localizedStandardCompare($1.id) == .orderedAscending }
+        // Group by top-level folder (one per imported zip). Newest import first.
+        let groups = Dictionary(grouping: posts, by: \.packID)
+        let date: (String) -> Date = { name in
+            (try? fm.attributesOfItem(atPath: self.root.appendingPathComponent(name).path)[.creationDate] as? Date) ?? .distantPast
+        }
+        packs = groups.map { Pack(id: $0.key, posts: $0.value) }
+            .sorted { date($0.id) > date($1.id) }
     }
+
+    func pack(_ id: String) -> Pack? { packs.first { $0.id == id } }
+    func postedCount(_ pack: Pack) -> Int { pack.posts.filter { posted.contains($0.id) }.count }
 
     /// caption.txt format:
     /// === TIKTOK ===\nTITLE:\n…\n\nDESCRIPTION:\n…(incl. tags)\n\n=== INSTAGRAM ===\n…
@@ -123,33 +143,25 @@ struct ContentView: View {
     @EnvironmentObject var store: Store
     @State private var importing = false
     @State private var errorText: String?
-    @State private var hidePosted = false
-
-    var visible: [Post] { hidePosted ? store.posts.filter { !store.posted.contains($0.id) } : store.posts }
 
     var body: some View {
         NavigationStack {
-            List(visible) { p in
-                NavigationLink(value: p) {
-                    HStack(spacing: 12) {
-                        Thumb(url: p.slides.first).frame(width: 48, height: 85)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(p.ttTitle.isEmpty ? p.shortName : p.ttTitle).font(.headline).lineLimit(2)
-                            Text("\(p.slides.count) slides · \(p.shortName)").font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if store.posted.contains(p.id) {
-                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                        }
-                    }
+            Group {
+                if store.packs.count > 1 {
+                    PackGrid()
+                } else if let only = store.packs.first {
+                    PostListView(packID: only.id)
+                } else {
+                    ContentUnavailableView("No packs yet", systemImage: "tray",
+                                           description: Text("AirDrop a .zip here or tap the import button."))
                 }
             }
-            .overlay { if store.posts.isEmpty { ContentUnavailableView("No packs yet", systemImage: "tray", description: Text("AirDrop a .zip here or tap the import button.")) } }
-            .navigationTitle("Posts")
+            .navigationDestination(for: String.self) { PostListView(packID: $0) }
             .navigationDestination(for: Post.self) { PostDetail(post: $0) }
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Toggle("Hide posted", isOn: $hidePosted).toggleStyle(.button) }
-                ToolbarItem(placement: .topBarTrailing) { Button { importing = true } label: { Image(systemName: "square.and.arrow.down") } }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { importing = true } label: { Image(systemName: "square.and.arrow.down") }
+                }
             }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.zip]) { result in
                 do { try store.importZip(result.get()) } catch { errorText = error.localizedDescription }
@@ -157,6 +169,104 @@ struct ContentView: View {
             .alert("Import failed", isPresented: Binding(get: { errorText != nil }, set: { if !$0 { errorText = nil } })) {
                 Button("OK") { errorText = nil }
             } message: { Text(errorText ?? "") }
+        }
+    }
+}
+
+/// Shown when there are 2+ imported projects: 2 per row.
+struct PackGrid: View {
+    @EnvironmentObject var store: Store
+    @State private var confirmDelete: Pack?
+    private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 18) {
+                ForEach(store.packs) { pack in
+                    NavigationLink(value: pack.id) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Thumb(url: pack.cover)
+                                .aspectRatio(9 / 16, contentMode: .fit)
+                                .overlay(alignment: .topTrailing) {
+                                    let done = store.postedCount(pack)
+                                    if done == pack.posts.count {
+                                        Image(systemName: "checkmark.circle.fill").font(.title2)
+                                            .foregroundStyle(.white, .green).padding(8)
+                                    }
+                                }
+                            Text(pack.displayName).font(.headline).lineLimit(2)
+                                .multilineTextAlignment(.leading).foregroundStyle(.primary)
+                            Text("\(store.postedCount(pack)) / \(pack.posts.count) posted")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(role: .destructive) { confirmDelete = pack } label: { Label("Delete project", systemImage: "trash") }
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Projects")
+        .confirmationDialog("Delete \(confirmDelete?.displayName ?? "")?", isPresented: Binding(
+            get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } }), titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                if let p = confirmDelete { store.deletePack(named: p.id) }
+                confirmDelete = nil
+            }
+        }
+    }
+}
+
+/// The post list for one project (also the home screen when there's only one project).
+struct PostListView: View {
+    @EnvironmentObject var store: Store
+    let packID: String
+    @State private var hidePosted = false
+    @State private var confirmDelete = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let pack = store.pack(packID)
+        let posts = pack?.posts ?? []
+        let visible = hidePosted ? posts.filter { !store.posted.contains($0.id) } : posts
+        List(visible) { p in
+            NavigationLink(value: p) {
+                HStack(spacing: 12) {
+                    Thumb(url: p.slides.first).frame(width: 48, height: 85)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(p.ttTitle.isEmpty ? p.shortName : p.ttTitle).font(.headline).lineLimit(2)
+                        Text("\(p.slides.count) slides · \(p.shortName)").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if store.posted.contains(p.id) {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                    }
+                }
+            }
+        }
+        .overlay {
+            if !posts.isEmpty && visible.isEmpty {
+                ContentUnavailableView("All posted 🎉", systemImage: "checkmark.seal",
+                                       description: Text("Turn off \"Hide posted\" to see them again."))
+            }
+        }
+        .navigationTitle(pack?.displayName ?? "Posts")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Toggle("Hide posted", isOn: $hidePosted).toggleStyle(.button)
+            }
+            ToolbarItem(placement: .secondaryAction) {
+                Button(role: .destructive) { confirmDelete = true } label: { Label("Delete project", systemImage: "trash") }
+            }
+        }
+        .confirmationDialog("Delete this project?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                store.deletePack(named: packID)
+                dismiss()
+            }
         }
     }
 }
